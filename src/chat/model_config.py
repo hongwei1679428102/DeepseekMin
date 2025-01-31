@@ -68,7 +68,6 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "use_fast": False,
             "low_cpu_mem_usage": False,
             "return_dict": False
         }
