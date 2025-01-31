@@ -104,11 +104,11 @@ SUPPORTED_MODELS = {
     "deepseek-qwen-14b": ModelConfig(
         name="deepseek-qwen-14b",
         path="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
-        max_length=4096,  # Qwen支持更长的上下文
+        max_length=4096,
         temperature=0.7,
         top_p=0.9,
         use_fast_tokenizer=True,
-        trust_remote_code=True,  # Qwen需要这个参数
+        trust_remote_code=True,
         test_cases=[
             {
                 "name": "代码生成",
@@ -169,15 +169,15 @@ print(process_data(data))
             }
         ],
         model_kwargs={
-            "device_map": "auto",  # 自动处理设备映射
-            "torch_dtype": torch.float16,  # 使用半精度以节省显存
+            "device_map": "auto",
+            "torch_dtype": torch.float16,
             "low_cpu_mem_usage": True,
             "use_cache": True,
-            "max_memory": {0: "20GB"},  # 限制GPU显存使用
-            "pad_token_id": 151643,  # Qwen特定的pad token
+            "max_memory": None,
+            "pad_token_id": 151643,
             "eos_token_id": 151643,
-            "bf16": True,  # 如果GPU支持，使用bfloat16
-            "quantization_config": {  # 使用4bit量化以减少显存占用
+            "bf16": False,
+            "quantization_config": {
                 "load_in_4bit": True,
                 "bnb_4bit_compute_dtype": torch.float16
             }

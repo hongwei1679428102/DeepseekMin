@@ -50,8 +50,10 @@ class ServerTester:
                     if line:
                         try:
                             data = json.loads(line.decode('utf-8').replace('data: ', ''))
-                            output += data.get("data", "")
-                            print(data.get("data", ""), end="", flush=True)
+                            text = data.get("data", "")
+                            if text:  # 只处理非空输出
+                                output += text
+                                print(text, end="", flush=True)
                         except json.JSONDecodeError:
                             continue
                         
@@ -65,9 +67,20 @@ class ServerTester:
                     }
                 )
                 output = response.json()["text"]
-                print(output)
+                if output:  # 只打印非空输出
+                    print(output)
                 
             time_taken = time.time() - start_time
+            
+            # 检查输出是否为空
+            if not output.strip():
+                return {
+                    "status": "error",
+                    "error": "模型生成的输出为空",
+                    "time_taken": time_taken,
+                    "output": "",
+                    "status_code": response.status_code
+                }
             
             return {
                 "status": "success",

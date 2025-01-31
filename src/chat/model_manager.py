@@ -118,6 +118,8 @@ class ModelManager:
                 formatted_prompt = f"[Round 1]\n\n问：{prompt}\n\n答："
             elif "gpt2" in config.path.lower():
                 formatted_prompt = f"问题：{prompt}\n答案："
+            elif "qwen" in config.path.lower():
+                formatted_prompt = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
             else:
                 formatted_prompt = prompt
             
@@ -153,12 +155,23 @@ class ModelManager:
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
             
             # 提取回答部分
-            if "[/INST]" in generated_text:
+            if "<|im_end|>" in generated_text:
+                # 处理Qwen模型的输出
+                parts = generated_text.split("<|im_end|>")
+                if len(parts) > 1:
+                    text = parts[-1].replace("<|im_start|>assistant", "").strip()
+                else:
+                    text = generated_text
+            elif "[/INST]" in generated_text:
                 text = generated_text.split("[/INST]")[1].strip()
             elif "答案：" in generated_text:
                 text = generated_text.split("答案：")[1].strip()
             else:
                 text = generated_text.strip()
+            
+            # 确保有输出内容
+            if not text:
+                text = "模型未能生成有效回答。"
             
             yield self.stream_handler.handle_text(text)
             
