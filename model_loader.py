@@ -6,9 +6,13 @@ import torch
 import os
 from typing import Tuple, Optional
 import gc
+from pathlib import Path
+from src.chat.model_manager import ModelManager
+from src.chat.model_config import SUPPORTED_MODELS
 
-# 设置模型缓存目录
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
+# 设置项目根目录和模型缓存目录
+PROJECT_ROOT = Path(__file__).parent
+MODELS_DIR = PROJECT_ROOT / "src" / "models"
 os.makedirs(MODELS_DIR, exist_ok=True)
 
 def get_device():
@@ -115,28 +119,33 @@ def generate_text(model, tokenizer, prompt: str,
 def main():
     # 模型名称
     models = [
-        "gpt2",  # 使用更简单的模型
+        "gpt2",
+        "deepseek-1.5b",  # 添加新模型
     ]
     
     # 测试提示
     test_prompt = "请解释什么是Python的装饰器模式?"
     
+    # 使用ModelManager
+    manager = ModelManager()
+    
     for model_name in models:
         try:
-            # 加载模型
-            model, tokenizer = load_model(model_name)
-            
-            if model is None or tokenizer is None:
-                print(f"跳过模型 {model_name} 因为加载失败")
+            # 使用ModelManager加载模型
+            if not manager.load_model(model_name):
                 continue
             
             print(f"\n使用模型 {model_name} 生成回答:")
-            response = generate_text(model, tokenizer, test_prompt)
-            print(f"回答: {response}")
+            # 使用流式输出
+            for output in manager.generate_stream(test_prompt):
+                if not output.finished:
+                    print(output.text, end="", flush=True)
+                if output.finished:
+                    print()  # 换行
             
             # 释放显存
-            del model
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             
         except Exception as e:
             print(f"处理模型 {model_name} 时发生错误: {str(e)}")
