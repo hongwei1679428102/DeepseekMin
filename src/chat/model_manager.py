@@ -70,7 +70,6 @@ class ModelManager:
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
                 torch_dtype=torch.float32,  # 使用float32避免精度问题
-                device_map='auto' if torch.cuda.is_available() else None,
                 **config.model_kwargs
             ).to(self.device)
             
