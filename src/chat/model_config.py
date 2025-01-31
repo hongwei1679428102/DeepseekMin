@@ -68,7 +68,6 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "torch_dtype": torch.float32,
             "use_fast": False,
             "low_cpu_mem_usage": False,
             "return_dict": False
