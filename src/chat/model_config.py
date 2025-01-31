@@ -169,9 +169,9 @@ print(process_data(data))
             }
         ],
         model_kwargs={
-            "device_map": "auto",
             "torch_dtype": torch.float16,
-            "low_cpu_mem_usage": False,
+            "low_cpu_mem_usage": True,
+            "device_map": "auto",
             "use_cache": True,
             "max_memory": None,
             "pad_token_id": 151643,

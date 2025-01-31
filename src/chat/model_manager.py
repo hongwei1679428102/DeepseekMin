@@ -77,12 +77,20 @@ class ModelManager:
             # 加载模型
             print(f"正在加载模型到{self.device}...")
             print(f"模型配置: {config.model_kwargs}")
+            
+            # 确保device_map和low_cpu_mem_usage配置正确
+            model_kwargs = config.model_kwargs.copy()
+            if "device_map" in model_kwargs and not model_kwargs.get("low_cpu_mem_usage", False):
+                print("检测到device_map配置，自动设置low_cpu_mem_usage=True")
+                model_kwargs["low_cpu_mem_usage"] = True
+            
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
-                **config.model_kwargs
+                **model_kwargs
             ).to(self.device)
+            
             print("模型加载成功")
             print(f"加载后GPU显存使用: {torch.cuda.memory_allocated() / 1024**3:.1f} GB")
             
@@ -98,6 +106,14 @@ class ModelManager:
             import traceback
             print(f"加载模型 {model_name} 失败: {str(e)}")
             print(f"错误堆栈: {traceback.format_exc()}")
+            
+            # 尝试清理已加载的资源
+            if 'model' in locals():
+                del model
+            if 'tokenizer' in locals():
+                del tokenizer
+            torch.cuda.empty_cache()
+            
             return False
             
     def generate_stream(self, prompt: str, model_name: Optional[str] = None) -> Iterator[StreamOutput]:
