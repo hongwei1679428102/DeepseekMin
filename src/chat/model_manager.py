@@ -227,3 +227,7 @@ class ModelManager:
                 "avg_tokens": 0,
                 "sample_output": f"生成失败: {str(e)}"
             } 
+
+    def get_available_models(self):
+        """获取所有可用的模型列表"""
+        return list(SUPPORTED_MODELS.keys()) 
