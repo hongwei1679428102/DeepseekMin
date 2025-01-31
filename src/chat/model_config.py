@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Any
+import torch
 
 @dataclass
 class ModelConfig:
@@ -62,8 +63,9 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "use_safetensors": True,  # 使用safetensors格式
-            "low_cpu_mem_usage": True  # 降低CPU内存使用
+            "low_cpu_mem_usage": True,  # 降低CPU内存使用
+            "torch_dtype": torch.float32,  # 使用float32
+            "device_map": None  # 禁用自动设备映射
         }
     ),
     "deepseek-llama-8b": ModelConfig(
@@ -92,7 +94,8 @@ SUPPORTED_MODELS = {
         ],
         model_kwargs={
             "revision": "main",  # 明确指定版本
-            "use_flash_attention_2": True,  # 使用Flash Attention 2优化性能
+            "low_cpu_mem_usage": True,
+            "torch_dtype": torch.float32
         }
     ),
 } 
