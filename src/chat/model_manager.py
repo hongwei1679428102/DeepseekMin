@@ -16,6 +16,24 @@ class ModelManager:
         self.tokenizers = {}
         self.current_model = None
         self.stream_handler = BaseStreamHandler()
+        self.device = self._setup_device()
+        
+    def _setup_device(self):
+        """设置并返回最佳可用设备"""
+        if torch.cuda.is_available():
+            # 设置CUDA设备
+            device = torch.device("cuda")
+            # 设置CUDA相关环境变量
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cuda.matmul.allow_tf32 = True
+            # 清理GPU缓存
+            torch.cuda.empty_cache()
+            print(f"使用GPU: {torch.cuda.get_device_name(0)}")
+            print(f"GPU内存: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+        else:
+            device = torch.device("cpu")
+            print("使用CPU模式")
+        return device
         
     def load_model(self, model_name: str) -> bool:
         """加载指定的模型"""
@@ -29,12 +47,10 @@ class ModelManager:
             
         config = SUPPORTED_MODELS[model_name]
         try:
-            # 获取设备
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            
-            # 设置环境变量以禁用警告
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
-            
+            # 清理GPU内存
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
             # 加载tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 config.path,
@@ -48,12 +64,18 @@ class ModelManager:
                 tokenizer.pad_token = tokenizer.eos_token
             
             # 加载模型
+            print(f"正在加载模型到{self.device}...")
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
+                torch_dtype=torch.float32,  # 使用float32避免精度问题
+                device_map='auto' if torch.cuda.is_available() else None,
                 **config.model_kwargs
-            ).to(device)
+            ).to(self.device)
+            
+            # 设置为评估模式
+            model.eval()
             
             self.models[model_name] = model
             self.tokenizers[model_name] = tokenizer

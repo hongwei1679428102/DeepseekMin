@@ -70,8 +70,11 @@ SUPPORTED_MODELS = {
         model_kwargs={
             "repetition_penalty": 1.2,
             "no_repeat_ngram_size": 3,
-            "num_beams": 4,
-            "length_penalty": 1.0
+            "num_beams": 1,
+            "length_penalty": 1.0,
+            "low_cpu_mem_usage": True,
+            "max_memory": {0: "10GB"},
+            "offload_folder": "offload"
         }
     ),
     "deepseek-llama-8b": ModelConfig(
