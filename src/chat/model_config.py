@@ -172,11 +172,8 @@ print(process_data(data))
             "torch_dtype": torch.float16,
             "low_cpu_mem_usage": True,
             "device_map": "auto",
-            "use_cache": True,
-            "max_memory": None,
             "pad_token_id": 151643,
             "eos_token_id": 151643,
-            "bf16": False,
         }
     ),
 } 

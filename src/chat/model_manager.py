@@ -1,7 +1,7 @@
 from typing import Optional, Iterator, Dict
 import torch
 from pathlib import Path
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from .model_config import ModelConfig, SUPPORTED_MODELS
 from .stream_handler import BaseStreamHandler, StreamOutput
 import os
@@ -65,7 +65,7 @@ class ModelManager:
             tokenizer = AutoTokenizer.from_pretrained(
                 config.path,
                 use_fast=config.use_fast_tokenizer,
-                trust_remote_code=config.trust_remote_code,
+                trust_remote_code=True,
                 cache_dir=MODELS_DIR / model_name,
             )
             print("tokenizer加载成功")
@@ -78,17 +78,19 @@ class ModelManager:
             print(f"正在加载模型到{self.device}...")
             print(f"模型配置: {config.model_kwargs}")
             
-            # 确保device_map和low_cpu_mem_usage配置正确
-            model_kwargs = config.model_kwargs.copy()
-            if "device_map" in model_kwargs and not model_kwargs.get("low_cpu_mem_usage", False):
-                print("检测到device_map配置，自动设置low_cpu_mem_usage=True")
-                model_kwargs["low_cpu_mem_usage"] = True
+            # 先加载配置
+            model_config = AutoConfig.from_pretrained(
+                config.path,
+                trust_remote_code=True,
+                cache_dir=MODELS_DIR / model_name
+            )
+            print(f"模型类型: {model_config.model_type}")
             
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
-                trust_remote_code=config.trust_remote_code,
+                trust_remote_code=True,
                 cache_dir=MODELS_DIR / model_name,
-                **model_kwargs
+                **config.model_kwargs
             ).to(self.device)
             
             print("模型加载成功")
