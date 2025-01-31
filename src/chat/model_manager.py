@@ -32,9 +32,6 @@ class ModelManager:
             # 获取设备
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
-            # 根据设备设置数据类型
-            dtype = torch.float16 if device.type == "cuda" else torch.float32
-            
             # 设置环境变量以禁用警告
             os.environ["TOKENIZERS_PARALLELISM"] = "false"
             
@@ -44,8 +41,6 @@ class ModelManager:
                 use_fast=config.use_fast_tokenizer,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
-                local_files_only=False,
-                force_download=True
             )
             
             # 加载模型
@@ -53,10 +48,6 @@ class ModelManager:
                 config.path,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
-                local_files_only=False,
-                force_download=True,
-                torch_dtype=dtype,
-                device_map="auto" if torch.cuda.is_available() else None,
                 **config.model_kwargs
             ).to(device)
             
