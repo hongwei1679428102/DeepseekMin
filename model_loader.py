@@ -1,5 +1,10 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+import os
+
+# 设置模型缓存目录
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
+os.makedirs(MODELS_DIR, exist_ok=True)
 
 def load_model(model_name: str):
     """
@@ -17,7 +22,9 @@ def load_model(model_name: str):
     # 加载分词器
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
-        trust_remote_code=True
+        trust_remote_code=True,
+        use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
+        cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
     )
     
     # 加载模型
@@ -25,7 +32,8 @@ def load_model(model_name: str):
         model_name,
         torch_dtype=torch.bfloat16,  # 使用bfloat16精度
         trust_remote_code=True,
-        device_map="auto"  # 自动处理设备映射
+        device_map="auto",  # 自动处理设备映射
+        cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
     )
     
     return model, tokenizer

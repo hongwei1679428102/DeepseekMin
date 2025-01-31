@@ -47,6 +47,7 @@ ENV/
 *.ckpt
 .cache/
 cached_*
+models/
 
 # Logs
 *.log
