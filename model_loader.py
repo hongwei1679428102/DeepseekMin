@@ -5,10 +5,24 @@ from transformers import (
 import torch
 import os
 from typing import Tuple, Optional
+import gc
 
 # 设置模型缓存目录
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
+
+def get_device():
+    """
+    获取可用的设备，并打印设备信息
+    """
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"使用GPU: {torch.cuda.get_device_name(0)}")
+        print(f"GPU内存: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+    else:
+        device = torch.device("cpu")
+        print("使用CPU模式")
+    return device
 
 def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[AutoTokenizer]]:
     """
@@ -24,6 +38,14 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
     print(f"正在加载模型: {model_name}")
     
     try:
+        # 获取设备
+        device = get_device()
+        
+        # 清理GPU内存
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
+        
         # 加载分词器
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
@@ -35,14 +57,16 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
         # 加载模型
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
+            torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,  # GPU使用float16
             trust_remote_code=True,
             cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
         )
         
-        # 手动将模型移到GPU（如果可用）
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
+        print(f"模型已加载到设备: {device}")
+        
+        if device.type == "cuda":
+            print(f"当前GPU内存使用: {torch.cuda.memory_allocated() / 1024**3:.1f} GB")
         
         return model, tokenizer
     except Exception as e:
