@@ -32,6 +32,9 @@ class ModelManager:
             # 获取设备
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
+            # 根据设备设置数据类型
+            dtype = torch.float16 if device.type == "cuda" else torch.float32
+            
             # 设置环境变量以禁用警告
             os.environ["TOKENIZERS_PARALLELISM"] = "false"
             
@@ -48,11 +51,11 @@ class ModelManager:
             # 加载模型
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
-                torch_dtype=torch.float32,  # 强制使用float32
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
                 local_files_only=False,
                 force_download=True,
+                torch_dtype=dtype,  # 使用根据设备确定的数据类型
                 **config.model_kwargs
             ).to(device)
             

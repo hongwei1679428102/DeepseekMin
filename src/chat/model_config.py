@@ -46,7 +46,7 @@ SUPPORTED_MODELS = {
     ),
     "deepseek-1.5b": ModelConfig(
         name="deepseek-1.5b",
-        path="microsoft/DialoGPT-medium",  # 替换为更兼容的模型
+        path="microsoft/DialoGPT-medium",
         max_length=2048,
         use_fast_tokenizer=False,
         test_cases=[
@@ -65,13 +65,12 @@ SUPPORTED_MODELS = {
         ],
         model_kwargs={
             "low_cpu_mem_usage": True,
-            "torch_dtype": torch.float32,
             "device_map": None
         }
     ),
     "deepseek-llama-8b": ModelConfig(
         name="deepseek-llama-8b",
-        path="facebook/opt-1.3b",  # 替换为更兼容的模型
+        path="facebook/opt-1.3b",
         max_length=2048,
         temperature=0.6,
         top_p=0.95,
@@ -97,7 +96,6 @@ SUPPORTED_MODELS = {
         model_kwargs={
             "revision": "main",
             "low_cpu_mem_usage": True,
-            "torch_dtype": torch.float32
         }
     ),
 } 
