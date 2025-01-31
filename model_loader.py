@@ -1,16 +1,16 @@
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
-    PreTrainedTokenizerFast
 )
 import torch
 import os
+from typing import Tuple, Optional
 
 # 设置模型缓存目录
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-def load_model(model_name: str):
+def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[AutoTokenizer]]:
     """
     加载指定的模型和分词器
     
@@ -23,29 +23,33 @@ def load_model(model_name: str):
     """
     print(f"正在加载模型: {model_name}")
     
-    # 加载分词器
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        trust_remote_code=True,
-        use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
-        cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
-    )
-    
-    # 加载模型
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=torch.bfloat16,  # 使用bfloat16精度
-        trust_remote_code=True,
-        device_map="auto",  # 自动处理设备映射
-        cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
-    )
-    
-    return model, tokenizer
+    try:
+        # 加载分词器
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            trust_remote_code=True,
+            use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
+            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
+        )
+        
+        # 加载模型
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
+            trust_remote_code=True,
+            device_map="auto",  # 自动处理设备映射
+            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
+        )
+        
+        return model, tokenizer
+    except Exception as e:
+        print(f"加载模型时发生错误: {str(e)}")
+        return None, None
 
 def generate_text(model, tokenizer, prompt: str, 
                  max_length: int = 512,
                  temperature: float = 0.6,
-                 top_p: float = 0.95):
+                 top_p: float = 0.95) -> str:
     """
     使用模型生成文本
     
