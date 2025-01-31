@@ -28,94 +28,6 @@ def get_device():
         print("使用CPU模式")
     return device
 
-def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[AutoTokenizer]]:
-    """
-    加载指定的模型和分词器
-    
-    Args:
-        model_name: 模型名称/路径
-        
-    Returns:
-        model: 加载的模型
-        tokenizer: 加载的分词器
-    """
-    print(f"正在加载模型: {model_name}")
-    
-    try:
-        # 获取设备
-        device = get_device()
-        
-        # 清理GPU内存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            gc.collect()
-        
-        # 加载分词器
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            trust_remote_code=True,
-            use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
-            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
-        )
-        
-        # 加载模型
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,  # GPU使用float16
-            trust_remote_code=True,
-            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
-        )
-        
-        model = model.to(device)
-        print(f"模型已加载到设备: {device}")
-        
-        if device.type == "cuda":
-            print(f"当前GPU内存使用: {torch.cuda.memory_allocated() / 1024**3:.1f} GB")
-        
-        return model, tokenizer
-    except Exception as e:
-        print(f"加载模型时发生错误: {str(e)}")
-        return None, None
-
-def generate_text(model, tokenizer, prompt: str, 
-                 max_length: int = 512,
-                 temperature: float = 0.6,
-                 top_p: float = 0.95) -> str:
-    """
-    使用模型生成文本
-    
-    Args:
-        model: 加载的模型
-        tokenizer: 加载的分词器
-        prompt: 输入提示
-        max_length: 最大生成长度
-        temperature: 温度参数(0.5-0.7)
-        top_p: top-p采样参数
-        
-    Returns:
-        str: 生成的文本
-    """
-    try:
-        # 编码输入
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        
-        # 生成文本
-        outputs = model.generate(
-            **inputs,
-            max_length=max_length,
-            temperature=temperature,
-            top_p=top_p,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-        
-        # 解码输出
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return response
-    except Exception as e:
-        print(f"生成文本时发生错误: {str(e)}")
-        return "生成文本失败"
-
 def main():
     # 模型名称
     models = [
@@ -131,13 +43,10 @@ def main():
     
     for model_name in models:
         try:
-            # 使用ModelManager加载模型
-            if not manager.load_model(model_name):
-                continue
-            
             print(f"\n使用模型 {model_name} 生成回答:")
+            
             # 使用流式输出
-            for output in manager.generate_stream(test_prompt):
+            for output in manager.generate_stream(test_prompt, model_name):
                 if not output.finished:
                     print(output.text, end="", flush=True)
                 if output.finished:
