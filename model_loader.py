@@ -1,5 +1,8 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import LlamaTokenizer, PreTrainedTokenizerFast
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer,
+    PreTrainedTokenizerFast
+)
 import torch
 import os
 
@@ -21,8 +24,7 @@ def load_model(model_name: str):
     print(f"正在加载模型: {model_name}")
     
     # 加载分词器
-    tokenizer_class = LlamaTokenizer if "llama" in model_name.lower() else AutoTokenizer
-    tokenizer = tokenizer_class.from_pretrained(
+    tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         trust_remote_code=True,
         use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
