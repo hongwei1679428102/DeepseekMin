@@ -115,30 +115,39 @@ class ModelManager:
             
             # 根据不同模型添加特定的提示模板
             if "chatglm" in config.path.lower():
-                formatted_prompt = f"[INST] {prompt} [/INST]"
+                formatted_prompt = f"[Round 1]\n\n问：{prompt}\n\n答："
             elif "gpt2" in config.path.lower():
                 formatted_prompt = f"问题：{prompt}\n答案："
             else:
                 formatted_prompt = prompt
             
-            inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True).to(model.device)
+            inputs = tokenizer(
+                formatted_prompt,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=config.max_length - 256  # 保留空间给生成的文本
+            ).to(model.device)
             
             print("使用标准生成方式")
-            outputs = model.generate(
-                **inputs,
-                max_length=config.max_length,
-                temperature=config.temperature,
-                top_p=config.top_p,
-                do_sample=True,
-                num_return_sequences=1,
-                num_beams=1,                  # 使用贪婪搜索
-                no_repeat_ngram_size=3,       # 避免重复
-                repetition_penalty=1.2,       # 重复惩罚
-                length_penalty=1.0,           # 长度惩罚
-                pad_token_id=tokenizer.pad_token_id,
-                bos_token_id=tokenizer.bos_token_id,
-                eos_token_id=tokenizer.eos_token_id
-            )
+            with torch.inference_mode():  # 使用inference_mode代替no_grad
+                outputs = model.generate(
+                    **inputs,
+                    max_length=config.max_length,
+                    temperature=config.temperature,
+                    top_p=config.top_p,
+                    do_sample=True,
+                    num_return_sequences=1,
+                    num_beams=1,
+                    no_repeat_ngram_size=3,
+                    repetition_penalty=1.2,
+                    length_penalty=1.0,
+                    pad_token_id=tokenizer.pad_token_id,
+                    bos_token_id=tokenizer.bos_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                    early_stopping=True,  # 添加早停
+                    min_length=50  # 确保生成足够长的回答
+                )
             
             # 解码输出
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)

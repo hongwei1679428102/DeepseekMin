@@ -28,6 +28,22 @@ class InferenceResponse(BaseModel):
     tokens: int
     tokens_per_second: float
 
+@app.get("/")
+async def root():
+    """API主页"""
+    return {
+        "name": "Model Inference API",
+        "version": "1.0.0",
+        "models": model_manager.get_available_models(),
+        "endpoints": {
+            "GET /": "此帮助信息",
+            "GET /models": "获取可用模型列表",
+            "POST /infer": "同步推理接口",
+            "POST /infer/stream": "流式推理接口"
+        },
+        "docs_url": "/docs"
+    }
+
 @app.get("/models")
 async def list_models():
     """获取所有可用模型列表"""
