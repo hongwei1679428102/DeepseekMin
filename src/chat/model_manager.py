@@ -43,6 +43,10 @@ class ModelManager:
                 cache_dir=MODELS_DIR / model_name,
             )
             
+            # 设置pad_token
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+            
             # 加载模型
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
@@ -99,14 +103,10 @@ class ModelManager:
                 top_p=config.top_p,
                 do_sample=True,
                 num_return_sequences=1,
-                min_length=50,                # 最小长度
                 num_beams=4,                  # 束搜索
                 no_repeat_ngram_size=3,       # 避免重复
                 repetition_penalty=1.2,       # 重复惩罚
                 length_penalty=1.0,           # 长度惩罚
-                eos_token_id=tokenizer.eos_token_id,
-                pad_token_id=tokenizer.pad_token_id,
-                attention_mask=inputs.attention_mask
             )
             
             # 解码输出

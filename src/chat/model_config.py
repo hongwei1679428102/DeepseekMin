@@ -48,12 +48,11 @@ SUPPORTED_MODELS = {
     ),
     "deepseek-1.5b": ModelConfig(
         name="deepseek-1.5b",
-        path="THUDM/chatglm2-6b",
+        path="uer/gpt2-chinese-cluecorpussmall",
         max_length=2048,
         use_fast_tokenizer=False,
         temperature=0.7,
         top_p=0.9,
-        trust_remote_code=True,
         test_cases=[
             {
                 "name": "中文问答",
