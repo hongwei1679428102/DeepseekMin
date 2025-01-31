@@ -55,6 +55,7 @@ class ModelManager:
             
         config = SUPPORTED_MODELS[model_name]
         try:
+            print(f"\n=== 开始加载模型: {model_name} ===")
             # 清理GPU内存
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -76,7 +77,6 @@ class ModelManager:
             
             # 加载模型
             print(f"正在加载模型到{self.device}...")
-            print(f"模型配置: {config.model_kwargs}")
             
             # 先加载配置
             model_config = AutoConfig.from_pretrained(
@@ -86,11 +86,22 @@ class ModelManager:
             )
             print(f"模型类型: {model_config.model_type}")
             
+            # 过滤掉不支持的参数
+            valid_kwargs = {}
+            for k, v in config.model_kwargs.items():
+                try:
+                    if hasattr(model_config, k) or k in ["torch_dtype", "device_map", "low_cpu_mem_usage"]:
+                        valid_kwargs[k] = v
+                except Exception as e:
+                    print(f"警告: 参数 {k} 可能不支持: {str(e)}")
+            
+            print(f"过滤后的模型参数: {valid_kwargs}")
+            
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
                 trust_remote_code=True,
                 cache_dir=MODELS_DIR / model_name,
-                **config.model_kwargs
+                **valid_kwargs
             ).to(self.device)
             
             print("模型加载成功")

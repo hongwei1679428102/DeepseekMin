@@ -174,6 +174,10 @@ print(process_data(data))
             "device_map": "auto",
             "pad_token_id": 151643,
             "eos_token_id": 151643,
+            "use_cache": True,
+            "revision": "main",
+            "use_flash_attention_2": True,
+            "attn_implementation": "flash_attention_2"
         }
     ),
 } 
