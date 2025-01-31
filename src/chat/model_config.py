@@ -171,16 +171,12 @@ print(process_data(data))
         model_kwargs={
             "device_map": "auto",
             "torch_dtype": torch.float16,
-            "low_cpu_mem_usage": True,
+            "low_cpu_mem_usage": False,
             "use_cache": True,
             "max_memory": None,
             "pad_token_id": 151643,
             "eos_token_id": 151643,
             "bf16": False,
-            "quantization_config": {
-                "load_in_4bit": True,
-                "bnb_4bit_compute_dtype": torch.float16
-            }
         }
     ),
 } 

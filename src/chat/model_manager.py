@@ -58,14 +58,17 @@ class ModelManager:
             # 清理GPU内存
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                print(f"当前GPU显存使用: {torch.cuda.memory_allocated() / 1024**3:.1f} GB")
                 
             # 加载tokenizer
+            print(f"开始加载tokenizer: {config.path}")
             tokenizer = AutoTokenizer.from_pretrained(
                 config.path,
                 use_fast=config.use_fast_tokenizer,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
             )
+            print("tokenizer加载成功")
             
             # 设置pad_token
             if tokenizer.pad_token is None:
@@ -73,12 +76,15 @@ class ModelManager:
             
             # 加载模型
             print(f"正在加载模型到{self.device}...")
+            print(f"模型配置: {config.model_kwargs}")
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
                 **config.model_kwargs
             ).to(self.device)
+            print("模型加载成功")
+            print(f"加载后GPU显存使用: {torch.cuda.memory_allocated() / 1024**3:.1f} GB")
             
             # 设置为评估模式
             model.eval()
@@ -89,19 +95,21 @@ class ModelManager:
             return True
             
         except Exception as e:
+            import traceback
             print(f"加载模型 {model_name} 失败: {str(e)}")
+            print(f"错误堆栈: {traceback.format_exc()}")
             return False
             
     def generate_stream(self, prompt: str, model_name: Optional[str] = None) -> Iterator[StreamOutput]:
         """流式生成文本"""
-        print(f"开始生成文本，模型: {model_name}")  # 调试信息
+        print(f"开始生成文本，模型: {model_name}")
         
         if model_name and model_name != self.current_model:
-            print(f"需要加载新模型: {model_name}")  # 调试信息
+            print(f"需要加载新模型: {model_name}")
             if not self.load_model(model_name):
                 yield StreamOutput(text=f"加载模型 {model_name} 失败", finished=True)
                 return
-                
+            
         if not self.current_model:
             yield StreamOutput(text="未加载任何模型", finished=True)
             return
@@ -123,16 +131,20 @@ class ModelManager:
             else:
                 formatted_prompt = prompt
             
+            print(f"格式化后的提示: {formatted_prompt[:100]}...")
+            
             inputs = tokenizer(
                 formatted_prompt,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
-                max_length=config.max_length - 256  # 保留空间给生成的文本
+                max_length=config.max_length - 256
             ).to(model.device)
             
+            print(f"输入token数量: {inputs['input_ids'].shape[1]}")
+            
             print("使用标准生成方式")
-            with torch.inference_mode():  # 使用inference_mode代替no_grad
+            with torch.inference_mode():
                 outputs = model.generate(
                     **inputs,
                     max_length=config.max_length,
@@ -147,12 +159,16 @@ class ModelManager:
                     pad_token_id=tokenizer.pad_token_id,
                     bos_token_id=tokenizer.bos_token_id,
                     eos_token_id=tokenizer.eos_token_id,
-                    early_stopping=True,  # 添加早停
-                    min_length=50  # 确保生成足够长的回答
+                    early_stopping=False,  # 禁用早停
+                    min_length=10,  # 降低最小长度要求
+                    max_new_tokens=512  # 限制新生成的token数量
                 )
+            
+            print(f"生成的token数量: {outputs.shape[1]}")
             
             # 解码输出
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            print(f"原始生成文本: {generated_text[:100]}...")
             
             # 提取回答部分
             if "<|im_end|>" in generated_text:
@@ -169,16 +185,22 @@ class ModelManager:
             else:
                 text = generated_text.strip()
             
+            print(f"处理后的文本: {text[:100]}...")
+            
             # 确保有输出内容
             if not text:
-                text = "模型未能生成有效回答。"
+                # 如果处理后的文本为空，使用原始生成文本
+                text = generated_text.strip()
+                if not text:
+                    text = "模型未能生成有效回答。"
             
             yield self.stream_handler.handle_text(text)
-            
             yield self.stream_handler.finish()
             
         except Exception as e:
-            print(f"生成过程中发生错误: {str(e)}")  # 调试信息
+            import traceback
+            print(f"生成过程中发生错误: {str(e)}")
+            print(f"错误堆栈: {traceback.format_exc()}")
             yield StreamOutput(text=f"生成失败: {str(e)}", finished=True)
 
     def measure_inference_time(self, model_name: str, prompt: str, num_runs: int = 3) -> Dict:
