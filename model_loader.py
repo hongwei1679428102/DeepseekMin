@@ -1,6 +1,7 @@
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
+    PreTrainedTokenizer,
 )
 import torch
 import os
@@ -10,7 +11,7 @@ from typing import Tuple, Optional
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[AutoTokenizer]]:
+def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[PreTrainedTokenizer]]:
     """
     加载指定的模型和分词器
     
@@ -29,7 +30,9 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
             model_name,
             trust_remote_code=True,
             use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
-            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
+            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
+            local_files_only=False,  # 允许从网络下载
+            force_download=True  # 强制重新下载
         )
         
         # 加载模型
@@ -38,7 +41,9 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
             torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
             trust_remote_code=True,
             device_map="auto",  # 自动处理设备映射
-            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1])  # 设置缓存目录
+            cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
+            local_files_only=False,  # 允许从网络下载
+            force_download=True  # 强制重新下载
         )
         
         return model, tokenizer
@@ -84,8 +89,7 @@ def generate_text(model, tokenizer, prompt: str,
 def main():
     # 模型名称
     models = [
-        "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+        "THUDM/chatglm-6b",  # 换用更容易加载的模型
     ]
     
     # 测试提示
@@ -96,6 +100,10 @@ def main():
             # 加载模型
             model, tokenizer = load_model(model_name)
             
+            if model is None or tokenizer is None:
+                print(f"跳过模型 {model_name} 因为加载失败")
+                continue
+            
             print(f"\n使用模型 {model_name} 生成回答:")
             response = generate_text(model, tokenizer, test_prompt)
             print(f"回答: {response}")
@@ -105,7 +113,7 @@ def main():
             torch.cuda.empty_cache()
             
         except Exception as e:
-            print(f"加载模型 {model_name} 时发生错误: {str(e)}")
+            print(f"处理模型 {model_name} 时发生错误: {str(e)}")
 
 if __name__ == "__main__":
     main() 

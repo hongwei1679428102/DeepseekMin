@@ -5,4 +5,8 @@ sentencepiece==0.2.0
 tokenizers==0.12.1
 protobuf==3.19.6
 numpy==1.19.5
-typing-extensions==4.1.1 
+typing-extensions==4.1.1
+requests==2.27.1
+tqdm==4.64.1
+regex==2023.8.8
+packaging==21.3 
