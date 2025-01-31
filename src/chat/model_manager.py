@@ -124,10 +124,13 @@ class ModelManager:
                 top_p=config.top_p,
                 do_sample=True,
                 num_return_sequences=1,
-                num_beams=4,                  # 束搜索
+                num_beams=1,                  # 使用贪婪搜索
                 no_repeat_ngram_size=3,       # 避免重复
                 repetition_penalty=1.2,       # 重复惩罚
                 length_penalty=1.0,           # 长度惩罚
+                pad_token_id=tokenizer.pad_token_id,
+                bos_token_id=tokenizer.bos_token_id,
+                eos_token_id=tokenizer.eos_token_id
             )
             
             # 解码输出

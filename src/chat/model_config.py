@@ -51,8 +51,8 @@ SUPPORTED_MODELS = {
         path="uer/gpt2-chinese-cluecorpussmall",
         max_length=2048,
         use_fast_tokenizer=False,
-        temperature=0.7,
-        top_p=0.9,
+        temperature=0.9,
+        top_p=0.95,
         test_cases=[
             {
                 "name": "中文问答",
@@ -67,7 +67,11 @@ SUPPORTED_MODELS = {
                 "prompt": "你是一个Python专家，请帮我优化以下代码性能：\n```python\nresult = []\nfor i in range(1000000):\n    if i % 2 == 0:\n        result.append(i)\n```",
             }
         ],
-        model_kwargs={}
+        model_kwargs={
+            "use_cache": True,
+            "output_attentions": False,
+            "output_hidden_states": False
+        }
     ),
     "deepseek-llama-8b": ModelConfig(
         name="deepseek-llama-8b",
