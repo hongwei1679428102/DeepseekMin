@@ -79,36 +79,50 @@ class ModelManager:
         config = SUPPORTED_MODELS[self.current_model]
         
         try:
-            print(f"编码输入文本: {prompt[:50]}...")  # 调试信息
-            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            print(f"编码输入文本: {prompt[:50]}...")
             
-            # 使用模型的stream_generate方法（如果有）
-            if hasattr(model, "stream_generate"):
-                print("使用stream_generate方法")  # 调试信息
-                for output in model.stream_generate(
-                    **inputs,
-                    max_length=config.max_length,
-                    temperature=config.temperature,
-                    top_p=config.top_p
-                ):
-                    yield self.stream_handler.handle_text(output)
+            # 根据不同模型添加特定的提示模板
+            if "chatglm" in config.path.lower():
+                formatted_prompt = f"[INST] {prompt} [/INST]"
+            elif "gpt2" in config.path.lower():
+                formatted_prompt = f"问题：{prompt}\n答案："
             else:
-                print("使用标准生成方式")  # 调试信息
-                # 标准生成方式
-                outputs = model.generate(
-                    **inputs,
-                    max_length=config.max_length,
-                    temperature=config.temperature,
-                    top_p=config.top_p,
-                    do_sample=True,
-                    pad_token_id=tokenizer.eos_token_id,
-                    num_return_sequences=1
-                )
-                
-                # 一次性解码所有输出
-                text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-                yield self.stream_handler.handle_text(text)
-                    
+                formatted_prompt = prompt
+            
+            inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True).to(model.device)
+            
+            print("使用标准生成方式")
+            outputs = model.generate(
+                **inputs,
+                max_length=config.max_length,
+                temperature=config.temperature,
+                top_p=config.top_p,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+                num_return_sequences=1,
+                min_length=50,                # 最小长度
+                num_beams=4,                  # 束搜索
+                no_repeat_ngram_size=3,       # 避免重复
+                repetition_penalty=1.2,       # 重复惩罚
+                length_penalty=1.0,           # 长度惩罚
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.pad_token_id,
+                attention_mask=inputs.attention_mask
+            )
+            
+            # 解码输出
+            generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # 提取回答部分
+            if "[/INST]" in generated_text:
+                text = generated_text.split("[/INST]")[1].strip()
+            elif "答案：" in generated_text:
+                text = generated_text.split("答案：")[1].strip()
+            else:
+                text = generated_text.strip()
+            
+            yield self.stream_handler.handle_text(text)
+            
             yield self.stream_handler.finish()
             
         except Exception as e:

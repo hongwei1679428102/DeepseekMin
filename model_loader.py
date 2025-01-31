@@ -36,7 +36,12 @@ def main():
     ]
     
     # 测试提示
-    test_prompt = "请解释什么是Python的装饰器模式?"
+    test_prompt = """请详细解释Python的装饰器模式，包括：
+1. 装饰器的定义和作用
+2. 装饰器的基本语法
+3. 一个简单的实际例子
+
+请用通俗易懂的语言回答，并给出具体的代码示例。"""
     
     # 使用ModelManager
     manager = ModelManager()
