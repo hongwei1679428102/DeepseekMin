@@ -89,11 +89,9 @@ class ModelManager:
             # 过滤掉不支持的参数
             valid_kwargs = {}
             for k, v in config.model_kwargs.items():
-                try:
-                    if hasattr(model_config, k) or k in ["torch_dtype", "device_map", "low_cpu_mem_usage"]:
-                        valid_kwargs[k] = v
-                except Exception as e:
-                    print(f"警告: 参数 {k} 可能不支持: {str(e)}")
+                # 只保留基本参数
+                if k in ["torch_dtype", "device_map", "low_cpu_mem_usage"]:
+                    valid_kwargs[k] = v
             
             print(f"过滤后的模型参数: {valid_kwargs}")
             
