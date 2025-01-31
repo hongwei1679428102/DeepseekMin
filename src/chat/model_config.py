@@ -67,15 +67,7 @@ SUPPORTED_MODELS = {
                 "prompt": "你是一个Python专家，请帮我优化以下代码性能：\n```python\nresult = []\nfor i in range(1000000):\n    if i % 2 == 0:\n        result.append(i)\n```",
             }
         ],
-        model_kwargs={
-            "repetition_penalty": 1.2,
-            "no_repeat_ngram_size": 3,
-            "num_beams": 1,
-            "length_penalty": 1.0,
-            "low_cpu_mem_usage": True,
-            "max_memory": {0: "10GB"},
-            "offload_folder": "offload"
-        }
+        model_kwargs={}
     ),
     "deepseek-llama-8b": ModelConfig(
         name="deepseek-llama-8b",
