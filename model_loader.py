@@ -37,9 +37,12 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
             model_name,
             torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
             trust_remote_code=True,
-            device_map="auto",  # 自动处理设备映射
             cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
         )
+        
+        # 手动将模型移到GPU（如果可用）
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = model.to(device)
         
         return model, tokenizer
     except Exception as e:
