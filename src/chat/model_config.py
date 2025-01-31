@@ -28,7 +28,9 @@ SUPPORTED_MODELS = {
         name="gpt2",
         path="gpt2",
         max_length=1024,
-        use_fast_tokenizer=True,  # GPT2可以使用fast tokenizer
+        use_fast_tokenizer=False,
+        temperature=0.7,
+        top_p=0.9,
         test_cases=[
             {
                 "name": "Python装饰器",
@@ -46,9 +48,11 @@ SUPPORTED_MODELS = {
     ),
     "deepseek-1.5b": ModelConfig(
         name="deepseek-1.5b",
-        path="microsoft/DialoGPT-medium",
+        path="microsoft/DialoGPT-large",
         max_length=2048,
         use_fast_tokenizer=False,
+        temperature=0.7,
+        top_p=0.9,
         test_cases=[
             {
                 "name": "中文问答",
@@ -64,7 +68,9 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "device_map": None
+            "repetition_penalty": 1.2,
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True
         }
     ),
     "deepseek-llama-8b": ModelConfig(
