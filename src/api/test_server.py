@@ -4,6 +4,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 import argparse
+from src.chat.model_config import SUPPORTED_MODELS
 
 class ServerTester:
     def __init__(self, base_url: str = "http://localhost:8000"):
@@ -47,8 +48,12 @@ class ServerTester:
                 output = ""
                 for line in response.iter_lines():
                     if line:
-                        data = json.loads(line.decode('utf-8').replace('data: ', ''))
-                        output += data.get("data", "")
+                        try:
+                            data = json.loads(line.decode('utf-8').replace('data: ', ''))
+                            output += data.get("data", "")
+                            print(data.get("data", ""), end="", flush=True)
+                        except json.JSONDecodeError:
+                            continue
                         
             else:
                 response = requests.post(
@@ -60,6 +65,7 @@ class ServerTester:
                     }
                 )
                 output = response.json()["text"]
+                print(output)
                 
             time_taken = time.time() - start_time
             
@@ -76,22 +82,47 @@ class ServerTester:
                 "error": str(e)
             }
             
-    def run_concurrent_tests(self, num_requests: int = 5) -> List[Dict]:
-        """并发测试"""
-        test_prompts = [
-            "解释Python的装饰器模式",
-            "什么是Python的生成器?",
-            "解释Python的上下文管理器",
-            "Python中的多线程和多进程有什么区别?",
-            "如何在Python中处理异常?"
-        ]
+    def test_model_cases(self, model_name: str, stream: bool = False) -> List[Dict]:
+        """测试指定模型的所有测试用例"""
+        if model_name not in SUPPORTED_MODELS:
+            return [{"status": "error", "error": f"不支持的模型: {model_name}"}]
+            
+        results = []
+        model_config = SUPPORTED_MODELS[model_name]
         
-        def single_test(prompt: str):
-            return self.test_inference(prompt, "deepseek-1.5b", stream=False)
+        print(f"\n=== 测试模型: {model_name} ===")
+        print(f"测试用例数量: {len(model_config.test_cases)}")
+        
+        for i, test_case in enumerate(model_config.test_cases, 1):
+            print(f"\n--- 测试用例 {i}: {test_case['name']} ---")
+            print(f"提示: {test_case['prompt'][:100]}...")
+            print("\n回答:")
+            
+            result = self.test_inference(test_case['prompt'], model_name, stream)
+            results.append({
+                "case_name": test_case['name'],
+                **result
+            })
+            
+            print(f"\n耗时: {result['time_taken']:.2f}秒")
+            print("-" * 80)
+            
+        return results
+            
+    def run_concurrent_tests(self, model_name: str, num_requests: int = 5) -> List[Dict]:
+        """并发测试"""
+        if model_name not in SUPPORTED_MODELS:
+            return [{"status": "error", "error": f"不支持的模型: {model_name}"}]
+            
+        model_config = SUPPORTED_MODELS[model_name]
+        test_cases = model_config.test_cases[:num_requests]
+        
+        def single_test(test_case):
+            return self.test_inference(test_case['prompt'], model_name, stream=False)
             
         results = []
         with ThreadPoolExecutor(max_workers=num_requests) as executor:
-            futures = [executor.submit(single_test, prompt) for prompt in test_prompts[:num_requests]]
+            futures = [executor.submit(single_test, test_case) for test_case in test_cases]
             for future in futures:
                 results.append(future.result())
                 
@@ -101,6 +132,8 @@ def main():
     parser = argparse.ArgumentParser(description="测试推理服务器")
     parser.add_argument("--url", default="http://localhost:8000", help="服务器URL")
     parser.add_argument("--concurrent", type=int, default=5, help="并发请求数")
+    parser.add_argument("--model", choices=list(SUPPORTED_MODELS.keys()), help="指定要测试的模型")
+    parser.add_argument("--stream", action="store_true", help="使用流式输出")
     args = parser.parse_args()
     
     tester = ServerTester(args.url)
@@ -115,49 +148,40 @@ def main():
     else:
         print(f"错误: {result['error']}")
         
-    # 测试同步推理
-    print("\n=== 测试同步推理 ===")
-    result = tester.test_inference(
-        "请用简单的语言解释什么是Python装饰器",
-        "deepseek-1.5b",
-        stream=False
-    )
-    print(f"状态: {result['status']}")
-    if result['status'] == 'success':
-        print(f"输出: {result['output']}")
-        print(f"响应时间: {result['time_taken']:.3f}秒")
-    else:
-        print(f"错误: {result['error']}")
+    # 如果指定了模型，测试该模型的所有用例
+    if args.model:
+        results = tester.test_model_cases(args.model, args.stream)
+        success_count = sum(1 for r in results if r['status'] == 'success')
+        avg_time = sum(r['time_taken'] for r in results if r['status'] == 'success') / max(success_count, 1)
         
-    # 测试流式推理
-    print("\n=== 测试流式推理 ===")
-    result = tester.test_inference(
-        "请解释Python的生成器函数",
-        "deepseek-1.5b",
-        stream=True
-    )
-    print(f"状态: {result['status']}")
-    if result['status'] == 'success':
-        print(f"输出: {result['output']}")
-        print(f"响应时间: {result['time_taken']:.3f}秒")
-    else:
-        print(f"错误: {result['error']}")
+        print(f"\n=== {args.model} 测试总结 ===")
+        print(f"成功用例: {success_count}/{len(results)}")
+        print(f"平均响应时间: {avg_time:.3f}秒")
         
+        # 打印错误信息
+        errors = [(r['case_name'], r['error']) for r in results if r['status'] == 'error']
+        if errors:
+            print("\n错误详情:")
+            for case_name, error in errors:
+                print(f"{case_name}: {error}")
+    
     # 并发测试
-    print(f"\n=== 并发测试 ({args.concurrent}个请求) ===")
-    results = tester.run_concurrent_tests(args.concurrent)
-    success_count = sum(1 for r in results if r['status'] == 'success')
-    avg_time = sum(r['time_taken'] for r in results if r['status'] == 'success') / max(success_count, 1)
-    
-    print(f"成功请求: {success_count}/{len(results)}")
-    print(f"平均响应时间: {avg_time:.3f}秒")
-    
-    # 打印错误信息
-    errors = [(i, r['error']) for i, r in enumerate(results) if r['status'] == 'error']
-    if errors:
-        print("\n错误详情:")
-        for i, error in errors:
-            print(f"请求 {i+1}: {error}")
+    if args.concurrent > 0:
+        model_to_test = args.model or "deepseek-qwen-14b"
+        print(f"\n=== 并发测试 ({args.concurrent}个请求) ===")
+        results = tester.run_concurrent_tests(model_to_test, args.concurrent)
+        success_count = sum(1 for r in results if r['status'] == 'success')
+        avg_time = sum(r['time_taken'] for r in results if r['status'] == 'success') / max(success_count, 1)
+        
+        print(f"成功请求: {success_count}/{len(results)}")
+        print(f"平均响应时间: {avg_time:.3f}秒")
+        
+        # 打印错误信息
+        errors = [(i, r['error']) for i, r in enumerate(results) if r['status'] == 'error']
+        if errors:
+            print("\n错误详情:")
+            for i, error in errors:
+                print(f"请求 {i+1}: {error}")
 
 if __name__ == "__main__":
     main() 
