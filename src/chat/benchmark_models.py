@@ -17,6 +17,14 @@ class ModelBenchmark:
     def __init__(self):
         self.manager = ModelManager()
         self.results: Dict[str, Dict] = {}
+        self.default_result = {
+            "avg": 0,
+            "min": 0,
+            "max": 0,
+            "tokens_per_second": 0,
+            "avg_tokens": 0,
+            "sample_output": "N/A"
+        }
         
     def measure_loading_time(self, model_name: str) -> float:
         """测量模型加载时间"""
@@ -34,42 +42,46 @@ class ModelBenchmark:
         """测量模型推断时间"""
         if not self.manager.current_model or self.manager.current_model != model_name:
             if not self.manager.load_model(model_name):
-                return {"avg": -1, "min": -1, "max": -1}
+                return self.default_result.copy()
                 
-        times = []
-        token_counts = []
-        outputs = []
-        
-        for i in range(num_runs):
-            start_time = time.time()
-            output_text = ""
-            token_count = 0
+        try:
+            times = []
+            token_counts = []
+            outputs = []
             
-            for output in self.manager.generate_stream(prompt):
-                if not output.finished:
-                    output_text += output.text
-                    token_count += 1
+            for i in range(num_runs):
+                start_time = time.time()
+                output_text = ""
+                token_count = 0
+                
+                for output in self.manager.generate_stream(prompt):
+                    if not output.finished:
+                        output_text += output.text
+                        token_count += 1
+                        
+                inference_time = time.time() - start_time
+                times.append(inference_time)
+                token_counts.append(token_count)
+                outputs.append(output_text)
+                
+                # 清理缓存
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
                     
-            inference_time = time.time() - start_time
-            times.append(inference_time)
-            token_counts.append(token_count)
-            outputs.append(output_text)
-            
-            # 清理缓存
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+                # 等待一下以避免GPU过热
+                time.sleep(1)
                 
-            # 等待一下以避免GPU过热
-            time.sleep(1)
-            
-        return {
-            "avg": sum(times) / len(times),
-            "min": min(times),
-            "max": max(times),
-            "tokens_per_second": sum(token_counts) / sum(times),
-            "avg_tokens": sum(token_counts) / len(token_counts),
-            "sample_output": outputs[0][:100] + "..."  # 保存部分输出示例
-        }
+            return {
+                "avg": sum(times) / len(times),
+                "min": min(times),
+                "max": max(times),
+                "tokens_per_second": sum(token_counts) / sum(times) if sum(times) > 0 else 0,
+                "avg_tokens": sum(token_counts) / len(token_counts),
+                "sample_output": outputs[0][:100] + "..." if outputs else "No output"
+            }
+        except Exception as e:
+            print(f"推断时发生错误: {str(e)}")
+            return self.default_result.copy()
         
     def run_benchmarks(self):
         """运行所有模型的基准测试"""
@@ -113,6 +125,9 @@ class ModelBenchmark:
         for model_name, results in self.results.items():
             loading_time = results["loading_time"]
             inference = results["inference_time"]
+            if loading_time < 0 or inference["avg"] < 0:
+                print(f"{model_name:<20} {'Failed':>14} {'Failed':>14} {'Failed':>14}")
+                continue
             print(
                 f"{model_name:<20} "
                 f"{loading_time:>14.2f} "

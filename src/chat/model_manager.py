@@ -1,4 +1,4 @@
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Dict
 import torch
 from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -106,4 +106,73 @@ class ModelManager:
             yield self.stream_handler.finish()
             
         except Exception as e:
-            yield StreamOutput(text=f"生成失败: {str(e)}", finished=True) 
+            yield StreamOutput(text=f"生成失败: {str(e)}", finished=True)
+
+    def measure_inference_time(self, model_name: str, prompt: str, num_runs: int = 3) -> Dict:
+        """测量模型推断时间"""
+        if not self.current_model or self.current_model != model_name:
+            if not self.load_model(model_name):
+                return {
+                    "avg": -1,
+                    "min": -1,
+                    "max": -1,
+                    "tokens_per_second": 0,
+                    "avg_tokens": 0,
+                    "sample_output": "加载失败"
+                }
+                
+        if not self.current_model:
+            return {
+                "avg": -1,
+                "min": -1,
+                "max": -1,
+                "tokens_per_second": 0,
+                "avg_tokens": 0,
+                "sample_output": "未加载任何模型"
+            }
+            
+        model = self.models[self.current_model]
+        tokenizer = self.tokenizers[self.current_model]
+        config = SUPPORTED_MODELS[self.current_model]
+        
+        try:
+            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            
+            # 使用模型的stream_generate方法（如果有）
+            if hasattr(model, "stream_generate"):
+                for output in model.stream_generate(
+                    **inputs,
+                    max_length=config.max_length,
+                    temperature=config.temperature,
+                    top_p=config.top_p
+                ):
+                    yield self.stream_handler.handle_text(output)
+            else:
+                # 标准生成方式
+                outputs = model.generate(
+                    **inputs,
+                    max_length=config.max_length,
+                    temperature=config.temperature,
+                    top_p=config.top_p,
+                    do_sample=True,
+                    pad_token_id=tokenizer.eos_token_id,
+                    return_dict_in_generate=True,
+                    output_scores=True,
+                    streaming=True
+                )
+                
+                for output in outputs:
+                    text = tokenizer.decode(output, skip_special_tokens=True)
+                    yield self.stream_handler.handle_text(text)
+                    
+            yield self.stream_handler.finish()
+            
+        except Exception as e:
+            return {
+                "avg": -1,
+                "min": -1,
+                "max": -1,
+                "tokens_per_second": 0,
+                "avg_tokens": 0,
+                "sample_output": f"生成失败: {str(e)}"
+            } 

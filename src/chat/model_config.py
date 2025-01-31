@@ -46,6 +46,7 @@ SUPPORTED_MODELS = {
         name="deepseek-1.5b",
         path="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
         max_length=2048,
+        use_fast_tokenizer=False,  # 禁用fast tokenizer
         test_cases=[
             {
                 "name": "中文问答",
@@ -59,7 +60,11 @@ SUPPORTED_MODELS = {
                 "name": "多轮对话",
                 "prompt": "你是一个Python专家，请帮我优化以下代码性能：\n```python\nresult = []\nfor i in range(1000000):\n    if i % 2 == 0:\n        result.append(i)\n```",
             }
-        ]
+        ],
+        model_kwargs={
+            "use_safetensors": True,  # 使用safetensors格式
+            "low_cpu_mem_usage": True  # 降低CPU内存使用
+        }
     ),
     "deepseek-llama-8b": ModelConfig(
         name="deepseek-llama-8b",

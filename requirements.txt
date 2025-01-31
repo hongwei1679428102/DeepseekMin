@@ -1,5 +1,5 @@
 torch>=1.12.0
-transformers==4.10.0
+transformers==4.18.0
 accelerate==0.9.0
 sentencepiece==0.2.0
 tokenizers==0.12.1
@@ -9,4 +9,5 @@ typing-extensions==4.1.1
 requests==2.27.1
 tqdm==4.64.1
 regex==2023.8.8
-packaging==21.3 
+packaging==21.3
+safetensors>=0.3.1 
