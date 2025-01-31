@@ -48,8 +48,8 @@ SUPPORTED_MODELS = {
     ),
     "deepseek-1.5b": ModelConfig(
         name="deepseek-1.5b",
-        path="uer/gpt2-chinese-cluecorpussmall",
-        max_length=2048,
+        path="IDEA-CCNL/Wenzhong-GPT2-110M",
+        max_length=1024,
         use_fast_tokenizer=False,
         temperature=0.9,
         top_p=0.95,
@@ -68,9 +68,10 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "use_cache": True,
-            "output_attentions": False,
-            "output_hidden_states": False
+            "torch_dtype": torch.float32,
+            "use_fast": False,
+            "low_cpu_mem_usage": False,
+            "return_dict": False
         }
     ),
     "deepseek-llama-8b": ModelConfig(

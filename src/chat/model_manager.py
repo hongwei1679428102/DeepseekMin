@@ -16,6 +16,14 @@ class ModelManager:
         self.tokenizers = {}
         self.current_model = None
         self.stream_handler = BaseStreamHandler()
+        
+        # CUDA设置
+        if torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = False  # 禁用TF32
+            torch.backends.cudnn.benchmark = False  # 禁用cuDNN基准测试
+            torch.backends.cudnn.deterministic = True  # 使用确定性算法
+            torch.cuda.empty_cache()  # 清理GPU缓存
+        
         self.device = self._setup_device()
         
     def _setup_device(self):
