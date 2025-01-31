@@ -2,6 +2,7 @@ from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
     PreTrainedTokenizer,
+    AutoModel,
 )
 import torch
 import os
@@ -11,7 +12,7 @@ from typing import Tuple, Optional
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[PreTrainedTokenizer]]:
+def load_model(model_name: str) -> Tuple[Optional[torch.nn.Module], Optional[PreTrainedTokenizer]]:
     """
     加载指定的模型和分词器
     
@@ -36,7 +37,7 @@ def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optiona
         )
         
         # 加载模型
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModel.from_pretrained(
             model_name,
             torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
             trust_remote_code=True,
@@ -69,22 +70,24 @@ def generate_text(model, tokenizer, prompt: str,
     Returns:
         str: 生成的文本
     """
-    # 编码输入
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    
-    # 生成文本
-    outputs = model.generate(
-        **inputs,
-        max_length=max_length,
-        temperature=temperature,
-        top_p=top_p,
-        do_sample=True,
-        pad_token_id=tokenizer.eos_token_id
-    )
-    
-    # 解码输出
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response
+    try:
+        # 编码输入
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        
+        # 生成文本
+        response, _ = model.chat(
+            tokenizer,
+            prompt,
+            history=[],
+            max_length=max_length,
+            temperature=temperature,
+            top_p=top_p
+        )
+        
+        return response
+    except Exception as e:
+        print(f"生成文本时发生错误: {str(e)}")
+        return "生成文本失败"
 
 def main():
     # 模型名称
