@@ -98,7 +98,6 @@ class ModelManager:
                 temperature=config.temperature,
                 top_p=config.top_p,
                 do_sample=True,
-                pad_token_id=tokenizer.eos_token_id,
                 num_return_sequences=1,
                 min_length=50,                # 最小长度
                 num_beams=4,                  # 束搜索
