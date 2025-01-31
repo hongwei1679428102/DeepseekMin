@@ -55,7 +55,8 @@ class ModelManager:
                 cache_dir=MODELS_DIR / model_name,
                 local_files_only=False,
                 force_download=True,
-                torch_dtype=dtype,  # 使用根据设备确定的数据类型
+                torch_dtype=dtype,
+                device_map="auto" if torch.cuda.is_available() else None,
                 **config.model_kwargs
             ).to(device)
             

@@ -64,7 +64,6 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "low_cpu_mem_usage": True,
             "device_map": None
         }
     ),
@@ -95,7 +94,6 @@ SUPPORTED_MODELS = {
         ],
         model_kwargs={
             "revision": "main",
-            "low_cpu_mem_usage": True,
         }
     ),
 } 
