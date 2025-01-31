@@ -1,8 +1,6 @@
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
-    PreTrainedTokenizer,
-    AutoModel,
 )
 import torch
 import os
@@ -12,7 +10,7 @@ from typing import Tuple, Optional
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-def load_model(model_name: str) -> Tuple[Optional[torch.nn.Module], Optional[PreTrainedTokenizer]]:
+def load_model(model_name: str) -> Tuple[Optional[AutoModelForCausalLM], Optional[AutoTokenizer]]:
     """
     加载指定的模型和分词器
     
@@ -32,19 +30,15 @@ def load_model(model_name: str) -> Tuple[Optional[torch.nn.Module], Optional[Pre
             trust_remote_code=True,
             use_fast=False,  # 使用Python实现的tokenizer而不是Fast版本
             cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
-            local_files_only=False,  # 允许从网络下载
-            force_download=True  # 强制重新下载
         )
         
         # 加载模型
-        model = AutoModel.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float32,  # Python 3.6环境下使用float32而不是bfloat16
             trust_remote_code=True,
             device_map="auto",  # 自动处理设备映射
             cache_dir=os.path.join(MODELS_DIR, model_name.split('/')[-1]),  # 设置缓存目录
-            local_files_only=False,  # 允许从网络下载
-            force_download=True  # 强制重新下载
         )
         
         return model, tokenizer
@@ -75,15 +69,17 @@ def generate_text(model, tokenizer, prompt: str,
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
         # 生成文本
-        response, _ = model.chat(
-            tokenizer,
-            prompt,
-            history=[],
+        outputs = model.generate(
+            **inputs,
             max_length=max_length,
             temperature=temperature,
-            top_p=top_p
+            top_p=top_p,
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id
         )
         
+        # 解码输出
+        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response
     except Exception as e:
         print(f"生成文本时发生错误: {str(e)}")
@@ -92,7 +88,7 @@ def generate_text(model, tokenizer, prompt: str,
 def main():
     # 模型名称
     models = [
-        "THUDM/chatglm-6b",  # 换用更容易加载的模型
+        "gpt2",  # 使用更简单的模型
     ]
     
     # 测试提示
