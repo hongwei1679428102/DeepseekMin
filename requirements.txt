@@ -1,8 +1,8 @@
 torch>=1.12.0
-transformers==4.18.0
+transformers==4.10.0
 accelerate==0.9.0
 sentencepiece==0.2.0
-tokenizers==0.12.1
+tokenizers==0.10.3
 protobuf==3.19.6
 numpy==1.19.5
 typing-extensions==4.1.1

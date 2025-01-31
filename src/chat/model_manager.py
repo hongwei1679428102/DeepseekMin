@@ -32,20 +32,27 @@ class ModelManager:
             # 获取设备
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
+            # 设置环境变量以禁用警告
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"
+            
             # 加载tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 config.path,
                 use_fast=config.use_fast_tokenizer,
                 trust_remote_code=config.trust_remote_code,
-                cache_dir=MODELS_DIR / model_name
+                cache_dir=MODELS_DIR / model_name,
+                local_files_only=False,
+                force_download=True
             )
             
             # 加载模型
             model = AutoModelForCausalLM.from_pretrained(
                 config.path,
-                torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
+                torch_dtype=torch.float32,  # 强制使用float32
                 trust_remote_code=config.trust_remote_code,
                 cache_dir=MODELS_DIR / model_name,
+                local_files_only=False,
+                force_download=True,
                 **config.model_kwargs
             ).to(device)
             

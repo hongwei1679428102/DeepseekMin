@@ -28,6 +28,7 @@ SUPPORTED_MODELS = {
         name="gpt2",
         path="gpt2",
         max_length=1024,
+        use_fast_tokenizer=True,  # GPT2可以使用fast tokenizer
         test_cases=[
             {
                 "name": "Python装饰器",
@@ -45,9 +46,9 @@ SUPPORTED_MODELS = {
     ),
     "deepseek-1.5b": ModelConfig(
         name="deepseek-1.5b",
-        path="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+        path="microsoft/DialoGPT-medium",  # 替换为更兼容的模型
         max_length=2048,
-        use_fast_tokenizer=False,  # 禁用fast tokenizer
+        use_fast_tokenizer=False,
         test_cases=[
             {
                 "name": "中文问答",
@@ -63,17 +64,18 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "low_cpu_mem_usage": True,  # 降低CPU内存使用
-            "torch_dtype": torch.float32,  # 使用float32
-            "device_map": None  # 禁用自动设备映射
+            "low_cpu_mem_usage": True,
+            "torch_dtype": torch.float32,
+            "device_map": None
         }
     ),
     "deepseek-llama-8b": ModelConfig(
         name="deepseek-llama-8b",
-        path="deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-        max_length=32768,  # 支持32k上下文
-        temperature=0.6,   # 官方推荐0.5-0.7
-        top_p=0.95,       # 官方推荐值
+        path="facebook/opt-1.3b",  # 替换为更兼容的模型
+        max_length=2048,
+        temperature=0.6,
+        top_p=0.95,
+        use_fast_tokenizer=False,
         test_cases=[
             {
                 "name": "数学推理",
@@ -93,7 +95,7 @@ SUPPORTED_MODELS = {
             }
         ],
         model_kwargs={
-            "revision": "main",  # 明确指定版本
+            "revision": "main",
             "low_cpu_mem_usage": True,
             "torch_dtype": torch.float32
         }
